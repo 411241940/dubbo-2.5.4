@@ -106,16 +106,18 @@ public class ExtensionLoader<T> {
     
     @SuppressWarnings("unchecked")
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
-        if (type == null)
+        if (type == null) // 拓展点类型非空判断
             throw new IllegalArgumentException("Extension type == null");
-        if(!type.isInterface()) {
+        if(!type.isInterface()) { // 拓展点类型只能是接口
             throw new IllegalArgumentException("Extension type(" + type + ") is not interface!");
         }
-        if(!withExtensionAnnotation(type)) {
+        if(!withExtensionAnnotation(type)) { // 需要添加spi注解,否则抛异常
             throw new IllegalArgumentException("Extension type(" + type + 
                     ") is not extension, because WITHOUT @" + SPI.class.getSimpleName() + " Annotation!");
         }
-        
+
+        // 从缓存EXTENSION_LOADERS中获取,如果不存在则新建后加入缓存
+        // 对于每一个拓展,都会有且只有一个ExtensionLoader与其对应
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
@@ -126,6 +128,8 @@ public class ExtensionLoader<T> {
 
     private ExtensionLoader(Class<?> type) {
         this.type = type;
+
+        // 这里会存在递归调用,ExtensionFactory的objectFactory为null,其他的均为AdaptiveExtensionFactory
         objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
     }
     
@@ -295,6 +299,7 @@ public class ExtensionLoader<T> {
 
     /**
      * 返回指定名字的扩展。如果指定名字的扩展不存在，则抛异常 {@link IllegalStateException}.
+     * 缓存扩展点对象
      *
      * @param name
      * @return

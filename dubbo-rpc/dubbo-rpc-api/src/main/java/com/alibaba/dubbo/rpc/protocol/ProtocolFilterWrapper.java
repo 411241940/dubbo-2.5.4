@@ -70,6 +70,8 @@ public class ProtocolFilterWrapper implements Protocol {
         Invoker<T> last = invoker;
         List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(invoker.getUrl(), key, group);
         if (filters.size() > 0) {
+            // filter从最后一个开始依次封装，最终形成一个链，调用顺序为filters的顺序
+            // 假如 filters 有4个元素，则链为：filter[0]->filter[1]->filter[2]->filter[3]->invoker
             for (int i = filters.size() - 1; i >= 0; i --) {
                 final Filter filter = filters.get(i);
                 final Invoker<T> next = last;
@@ -88,6 +90,7 @@ public class ProtocolFilterWrapper implements Protocol {
                     }
 
                     public Result invoke(Invocation invocation) throws RpcException {
+                        // 责任链传递调用
                         return filter.invoke(next, invocation);
                     }
 

@@ -39,7 +39,7 @@ public class AdaptiveCompiler implements Compiler {
         ExtensionLoader<Compiler> loader = ExtensionLoader.getExtensionLoader(Compiler.class);
         String name = DEFAULT_COMPILER; // copy reference
         if (name != null && name.length() > 0) {
-            compiler = loader.getExtension(name);
+            compiler = loader.getExtension(name); // 返回指定名字的扩展
         } else {
             compiler = loader.getDefaultExtension();
         }
