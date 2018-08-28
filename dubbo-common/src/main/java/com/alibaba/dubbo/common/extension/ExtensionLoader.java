@@ -81,12 +81,21 @@ public class ExtensionLoader<T> {
 
     private final ExtensionFactory objectFactory;
 
+    /**
+     * class -> name
+     */
     private final ConcurrentMap<Class<?>, String> cachedNames = new ConcurrentHashMap<Class<?>, String>();
-    
+
+    /**
+     * name -> class
+     */
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<Map<String,Class<?>>>();
 
     private final Map<String, Activate> cachedActivates = new ConcurrentHashMap<String, Activate>();
 
+    /**
+     * Adaptive 类
+     */
     private volatile Class<?> cachedAdaptiveClass = null;
 
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<String, Holder<Object>>();
@@ -448,6 +457,10 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 获取该类型的 Adaptive 扩展实例
+     * @return 扩展实例
+     */
     @SuppressWarnings("unchecked")
     public T getAdaptiveExtension() {
         Object instance = cachedAdaptiveInstance.get();
@@ -562,7 +575,8 @@ public class ExtensionLoader<T> {
 	        throw new IllegalStateException("No such extension \"" + name + "\" for " + type.getName() + "!");
 	    return clazz;
 	}
-	
+
+    // spi扩展加载
 	private Map<String, Class<?>> getExtensionClasses() {
         Map<String, Class<?>> classes = cachedClasses.get();
         if (classes == null) {
@@ -577,7 +591,7 @@ public class ExtensionLoader<T> {
         return classes;
 	}
 
-    // 此方法已经getExtensionClasses方法同步过。
+    // 此方法已经getExtensionClasses方法同步(加锁)过。
     private Map<String, Class<?>> loadExtensionClasses() {
         final SPI defaultAnnotation = type.getAnnotation(SPI.class);
         if(defaultAnnotation != null) {
@@ -591,7 +605,13 @@ public class ExtensionLoader<T> {
                 if(names.length == 1) cachedDefaultName = names[0];
             }
         }
-        
+
+        /**
+         * 从下面的路径中加载这个类型的扩展
+         * META-INF/dubbo/internal/
+         * META-INF/dubbo/
+         * META-INF/services/
+         */
         Map<String, Class<?>> extensionClasses = new HashMap<String, Class<?>>();
         loadFile(extensionClasses, DUBBO_INTERNAL_DIRECTORY);
         loadFile(extensionClasses, DUBBO_DIRECTORY);
@@ -626,10 +646,10 @@ public class ExtensionLoader<T> {
                                         int i = line.indexOf('=');
                                         if (i > 0) {
                                             name = line.substring(0, i).trim();
-                                            line = line.substring(i + 1).trim();
+                                            line = line.substring(i + 1).trim(); // 类的全限定名称
                                         }
                                         if (line.length() > 0) {
-                                            Class<?> clazz = Class.forName(line, true, classLoader);
+                                            Class<?> clazz = Class.forName(line, true, classLoader); // 加载class
                                             if (! type.isAssignableFrom(clazz)) {
                                                 throw new IllegalStateException("Error when load extension class(interface: " +
                                                         type + ", class line: " + clazz.getName() + "), class " 
@@ -637,22 +657,22 @@ public class ExtensionLoader<T> {
                                             }
                                             if (clazz.isAnnotationPresent(Adaptive.class)) {
                                                 if(cachedAdaptiveClass == null) {
-                                                    cachedAdaptiveClass = clazz;
+                                                    cachedAdaptiveClass = clazz; // 如果类上有 @Adaptive 注解，就将此类作为cachedAdaptiveClass
                                                 } else if (! cachedAdaptiveClass.equals(clazz)) {
                                                     throw new IllegalStateException("More than 1 adaptive class found: "
                                                             + cachedAdaptiveClass.getClass().getName()
-                                                            + ", " + clazz.getClass().getName());
+                                                            + ", " + clazz.getClass().getName()); // 同一类型有多个adaptive类，报错
                                                 }
-                                            } else {
+                                            } else { // 类上没有 @Adaptive 注解
                                                 try {
-                                                    clazz.getConstructor(type);
+                                                    clazz.getConstructor(type); // 有此类型的构造方法(拷贝构造函数)，说明是一个 Wrapper 类
                                                     Set<Class<?>> wrappers = cachedWrapperClasses;
                                                     if (wrappers == null) {
                                                         cachedWrapperClasses = new ConcurrentHashSet<Class<?>>();
                                                         wrappers = cachedWrapperClasses;
                                                     }
                                                     wrappers.add(clazz);
-                                                } catch (NoSuchMethodException e) {
+                                                } catch (NoSuchMethodException e) { // 抛异常，说明没有拷贝构造函数，说明是普通的类
                                                     clazz.getConstructor();
                                                     if (name == null || name.length() == 0) {
                                                         name = findAnnotationName(clazz);
@@ -667,7 +687,7 @@ public class ExtensionLoader<T> {
                                                     }
                                                     String[] names = NAME_SEPARATOR.split(name);
                                                     if (names != null && names.length > 0) {
-                                                        Activate activate = clazz.getAnnotation(Activate.class);
+                                                        Activate activate = clazz.getAnnotation(Activate.class); // 类是否有 @Activate 注解
                                                         if (activate != null) {
                                                             cachedActivates.put(names[0], activate);
                                                         }
@@ -731,19 +751,26 @@ public class ExtensionLoader<T> {
     
     private Class<?> getAdaptiveExtensionClass() {
         getExtensionClasses();
-        if (cachedAdaptiveClass != null) {
+        if (cachedAdaptiveClass != null) { // 该类型有 @Adaptive 类，直接返回
             return cachedAdaptiveClass;
         }
         return cachedAdaptiveClass = createAdaptiveExtensionClass();
     }
-    
+
+    // 创建 Adaptive 扩展类
     private Class<?> createAdaptiveExtensionClass() {
-        String code = createAdaptiveExtensionClassCode();
-        ClassLoader classLoader = findClassLoader();
-        com.alibaba.dubbo.common.compiler.Compiler compiler = ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.common.compiler.Compiler.class).getAdaptiveExtension();
-        return compiler.compile(code, classLoader);
+        String code = createAdaptiveExtensionClassCode(); // 拼接 adaptive 类代码
+        ClassLoader classLoader = findClassLoader(); // 获取类加载器
+        com.alibaba.dubbo.common.compiler.Compiler compiler = ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.common.compiler.Compiler.class).getAdaptiveExtension(); // 获取 Compiler
+        return compiler.compile(code, classLoader); // 编译
     }
-    
+
+    /**
+     * 创建 Adaptive 扩展类的代码
+     * 声明在方法上的 @Adaptive 的 value 作用是：在url上找该key的Value作为要Adapt成的Extension名；
+     * @see com.alibaba.dubbo.common.extension.Adaptive
+     * @return Adaptive 扩展类代码
+     */
     private String createAdaptiveExtensionClassCode() {
         StringBuilder codeBuidler = new StringBuilder();
         Method[] methods = type.getMethods();

@@ -42,7 +42,8 @@ public class ActiveLimitFilter implements Filter {
             long timeout = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.TIMEOUT_KEY, 0);
             long start = System.currentTimeMillis();
             long remain = timeout;
-            int active = count.getActive();
+            int active = count.getActive(); // 获取计数器值
+            // 如果该方法并发请求数量大于设置值，则挂起当前线程。
             if (active >= max) {
                 synchronized (count) {
                     while ((active = count.getActive()) >= max) {
@@ -50,6 +51,7 @@ public class ActiveLimitFilter implements Filter {
                             count.wait(remain);
                         } catch (InterruptedException e) {
                         }
+                        // 如果等待时间超时，则抛出异常
                         long elapsed = System.currentTimeMillis() - start;
                         remain = timeout - elapsed;
                         if (remain <= 0) {
@@ -63,12 +65,13 @@ public class ActiveLimitFilter implements Filter {
                 }
             }
         }
+        // 没有限流时候，正常调用
         try {
             long begin = System.currentTimeMillis();
-            RpcStatus.beginCount(url, methodName);
+            RpcStatus.beginCount(url, methodName); // 计数器自增
             try {
                 Result result = invoker.invoke(invocation);
-                RpcStatus.endCount(url, methodName, System.currentTimeMillis() - begin, true);
+                RpcStatus.endCount(url, methodName, System.currentTimeMillis() - begin, true); // 计数器自减
                 return result;
             } catch (RuntimeException t) {
                 RpcStatus.endCount(url, methodName, System.currentTimeMillis() - begin, false);

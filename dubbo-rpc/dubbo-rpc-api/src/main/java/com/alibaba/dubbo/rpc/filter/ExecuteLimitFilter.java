@@ -39,6 +39,7 @@ public class ExecuteLimitFilter implements Filter {
         int max = url.getMethodParameter(methodName, Constants.EXECUTES_KEY, 0);
         if (max > 0) {
             RpcStatus count = RpcStatus.getStatus(url, invocation.getMethodName());
+            // 并发处理数量大于设置的值，会抛出异常
             if (count.getActive() >= max) {
                 throw new RpcException("Failed to invoke method " + invocation.getMethodName() + " in provider " + url + ", cause: The service using threads greater than <dubbo:service executes=\"" + max + "\" /> limited.");
             }
@@ -46,6 +47,8 @@ public class ExecuteLimitFilter implements Filter {
         long begin = System.currentTimeMillis();
         boolean isException = false;
         RpcStatus.beginCount(url, methodName);
+
+        // 没有限流时候，正常调用
         try {
             Result result = invoker.invoke(invocation);
             return result;

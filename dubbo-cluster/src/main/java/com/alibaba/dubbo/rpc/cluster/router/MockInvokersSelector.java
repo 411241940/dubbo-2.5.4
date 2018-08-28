@@ -39,7 +39,7 @@ public class MockInvokersSelector implements Router {
 		} else {
 			String value = invocation.getAttachments().get(Constants.INVOCATION_NEED_MOCK);
 			if (value == null) 
-				return getNormalInvokers(invokers);
+				return getNormalInvokers(invokers); // 过滤mock invoker
 			else if (Boolean.TRUE.toString().equalsIgnoreCase(value)){
 				return getMockedInvokers(invokers);
 			} 
