@@ -91,6 +91,10 @@ public class ExtensionLoader<T> {
      */
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<Map<String,Class<?>>>();
 
+    /**
+     * Activate缓存
+     * name -> Activate
+     */
     private final Map<String, Activate> cachedActivates = new ConcurrentHashMap<String, Activate>();
 
     /**
@@ -524,10 +528,10 @@ public class ExtensionLoader<T> {
                 EXTENSION_INSTANCES.putIfAbsent(clazz, (T) clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
-            injectExtension(instance);
+            injectExtension(instance); // ioc
             Set<Class<?>> wrapperClasses = cachedWrapperClasses;
             if (wrapperClasses != null && wrapperClasses.size() > 0) {
-                for (Class<?> wrapperClass : wrapperClasses) {
+                for (Class<?> wrapperClass : wrapperClasses) { // 处理 wrapper (aop)
                     instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
                 }
             }
@@ -542,7 +546,7 @@ public class ExtensionLoader<T> {
         try {
             if (objectFactory != null) {
                 for (Method method : instance.getClass().getMethods()) {
-                    if (method.getName().startsWith("set")
+                    if (method.getName().startsWith("set") // 遍历所有 public set 方法
                             && method.getParameterTypes().length == 1
                             && Modifier.isPublic(method.getModifiers())) {
                         Class<?> pt = method.getParameterTypes()[0];

@@ -37,13 +37,13 @@ public class AdaptiveExtensionFactory implements ExtensionFactory {
         ExtensionLoader<ExtensionFactory> loader = ExtensionLoader.getExtensionLoader(ExtensionFactory.class);
         List<ExtensionFactory> list = new ArrayList<ExtensionFactory>();
         for (String name : loader.getSupportedExtensions()) {
-            list.add(loader.getExtension(name));
+            list.add(loader.getExtension(name)); // 获取 ExtensionFactory 的所有非 Adaptive 的扩展类：SpiExtensionFactory、SpringExtensionFactory
         }
         factories = Collections.unmodifiableList(list);
     }
 
     public <T> T getExtension(Class<T> type, String name) {
-        for (ExtensionFactory factory : factories) {
+        for (ExtensionFactory factory : factories) { // SpiExtensionFactory、SpringExtensionFactory 通过这两个 factory 去获取扩展类
             T extension = factory.getExtension(type, name);
             if (extension != null) {
                 return extension;
