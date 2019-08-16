@@ -135,7 +135,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             throw new IllegalStateException("Already destroyed!");
         }
     	if (ref == null) {
-    		init();
+    		init(); // 初始化
     	}
     	return ref;
     }
@@ -162,36 +162,43 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 	        return;
 	    }
 	    initialized = true;
-    	if (interfaceName == null || interfaceName.length() == 0) {
+    	if (interfaceName == null || interfaceName.length() == 0) { // 校验接口名非空
     	    throw new IllegalStateException("<dubbo:reference interface=\"\" /> interface not allow null!");
     	}
     	// 获取消费者全局配置
     	checkDefault();
-        appendProperties(this);
+        appendProperties(this); // 拼接属性配置（环境变量 + properties 属性）到 ReferenceConfig 对象
         if (getGeneric() == null && getConsumer() != null) {
             setGeneric(getConsumer().getGeneric());
         }
-        if (ProtocolUtils.isGeneric(getGeneric())) {
+        if (ProtocolUtils.isGeneric(getGeneric())) { // 泛化接口的实现
             interfaceClass = GenericService.class;
-        } else {
+        } else { // 普通接口的实现
             try {
 				interfaceClass = Class.forName(interfaceName, true, Thread.currentThread()
 				        .getContextClassLoader());
 			} catch (ClassNotFoundException e) {
 				throw new IllegalStateException(e.getMessage(), e);
 			}
-            checkInterfaceAndMethods(interfaceClass, methods);
+            checkInterfaceAndMethods(interfaceClass, methods); // 校验接口和方法
         }
+        // 直连提供者，参见文档《直连提供者》http://dubbo.apache.org/zh-cn/docs/user/demos/explicit-target.html
+        // 【直连提供者】第一优先级，通过 -D 参数指定 ，例如 java -Dcom.alibaba.xxx.XxxService=dubbo://localhost:20890
         String resolve = System.getProperty(interfaceName);
         String resolveFile = null;
+        // 【直连提供者】第二优先级，通过文件映射，例如 com.alibaba.xxx.XxxService=dubbo://localhost:20890
         if (resolve == null || resolve.length() == 0) {
 	        resolveFile = System.getProperty("dubbo.resolve.file");
+
+	        // 默认先加载，`${user.home}/dubbo-resolve.properties` 文件 ，无需配置
 	        if (resolveFile == null || resolveFile.length() == 0) {
 	        	File userResolveFile = new File(new File(System.getProperty("user.home")), "dubbo-resolve.properties");
 	        	if (userResolveFile.exists()) {
 	        		resolveFile = userResolveFile.getAbsolutePath();
 	        	}
 	        }
+
+            // 存在 resolveFile ，则进行文件读取加载。
 	        if (resolveFile != null && resolveFile.length() > 0) {
 	        	Properties properties = new Properties();
 	        	FileInputStream fis = null;
@@ -210,6 +217,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 	        	resolve = properties.getProperty(interfaceName);
 	        }
         }
+
+        // 设置直连提供者的 url
         if (resolve != null && resolve.length() > 0) {
         	url = resolve;
         	if (logger.isWarnEnabled()) {
@@ -220,6 +229,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         		}
     		}
         }
+
+        // 从 ConsumerConfig 对象中，读取 application、module、registries、monitor 配置对象。
         if (consumer != null) {
             if (application == null) {
                 application = consumer.getApplication();
@@ -234,6 +245,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 monitor = consumer.getMonitor();
             }
         }
+
+        // 从 ModuleConfig 对象中，读取 registries、monitor 配置对象。
         if (module != null) {
             if (registries == null) {
                 registries = module.getRegistries();
@@ -242,6 +255,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 monitor = module.getMonitor();
             }
         }
+
+        // 从 ApplicationConfig 对象中，读取 registries、monitor 配置对象。
         if (application != null) {
             if (registries == null) {
                 registries = application.getRegistries();
@@ -250,8 +265,10 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 monitor = application.getMonitor();
             }
         }
-        checkApplication();
-        checkStubAndMock(interfaceClass);
+        checkApplication(); // 校验 ApplicationConfig 配置。
+        checkStubAndMock(interfaceClass); // 校验 Stub 和 Mock 相关的配置
+
+        // 将各种配置，添加到 map 中。
         Map<String, String> map = new HashMap<String, String>();
         Map<Object, Object> attributes = new HashMap<Object, Object>();
         map.put(Constants.SIDE_KEY, Constants.CONSUMER_SIDE);
@@ -266,7 +283,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 map.put("revision", revision);
             }
 
-            String[] methods = Wrapper.getWrapper(interfaceClass).getMethodNames();
+            String[] methods = Wrapper.getWrapper(interfaceClass).getMethodNames(); // 获得方法数组
             if(methods.length == 0) {
                 logger.warn("NO method found in service interface " + interfaceClass.getName());
                 map.put("methods", Constants.ANY_VALUE);
@@ -291,7 +308,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         map.put(method.getName() + ".retries", "0");
                     }
                 }
+                // 将带有 @Parameter(attribute = true) 配置对象的属性，添加到参数集合。参见《事件通知》http://dubbo.apache.org/zh-cn/docs/user/demos/events-notify.html
                 appendAttributes(attributes, method, prifix + "." + method.getName());
+                // 检查属性集合中的事件通知方法是否正确。若正确，进行转换。
                 checkAndConvertImplicitConfig(method, map, attributes);
             }
         }
@@ -349,7 +368,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         } else {
             isJvmRefer = isInjvm().booleanValue();
         }
-		
+
+        // 把远端服务转换为 Invoker
+        // 调用 Protocol 的 refer 方法生成 Invoker 实例
 		if (isJvmRefer) {
 			URL url = new URL(Constants.LOCAL_PROTOCOL, NetUtils.LOCALHOST, 0, interfaceClass.getName()).addParameters(map);
 			invoker = refprotocol.refer(interfaceClass, url);
@@ -357,7 +378,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 logger.info("Using injvm service " + interfaceClass.getName());
             }
 		} else {
-            if (url != null && url.length() > 0) { // 用户指定URL，指定的URL可能是对点对直连地址，也可能是注册中心URL
+            if (url != null && url.length() > 0) { // 点对点直连，用户指定URL，指定的URL可能是对点对直连地址，也可能是注册中心URL
                 String[] us = Constants.SEMICOLON_SPLIT_PATTERN.split(url);
                 if (us != null && us.length > 0) {
                     for (String u : us) {
@@ -430,7 +451,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         if (consumer == null) {
             consumer = new ConsumerConfig();
         }
-        appendProperties(consumer);
+        appendProperties(consumer); // 拼接属性配置（环境变量 + properties 属性）到 ConsumerConfig 对象
     }
 
 	public Class<?> getInterfaceClass() {

@@ -71,7 +71,8 @@ public class NetUtils {
             }
         }
     }
-    
+
+    // port大于0时，从port开始自增获取没有被占用的端口
     public static int getAvailablePort(int port) {
     	if (port <= 0) {
     		return getAvailablePort();

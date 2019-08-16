@@ -104,7 +104,7 @@ public class ExceptionFilter implements Filter {
                         return result;
                     }
 
-                    // 否则，包装成RuntimeException抛给客户端
+                    // 否则，包装成RuntimeException抛给客户端。防止provider抛出一个仅在provider自定义的一个异常,不然该异常到达consumer,是无法序列化的
                     return new RpcResult(new RuntimeException(StringUtils.toString(exception)));
                 } catch (Throwable e) {
                     logger.warn("Fail to ExceptionFilter when called by " + RpcContext.getContext().getRemoteHost()
