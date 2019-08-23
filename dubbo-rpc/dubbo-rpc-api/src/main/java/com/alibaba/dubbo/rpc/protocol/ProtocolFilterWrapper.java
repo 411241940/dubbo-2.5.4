@@ -30,6 +30,8 @@ import com.alibaba.dubbo.rpc.RpcException;
 
 /**
  * ListenerProtocol
+ *
+ * 用于给 Invoker 增加过滤链
  * 
  * @author william.liangf
  */
