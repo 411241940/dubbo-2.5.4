@@ -65,7 +65,12 @@ public class DubboProtocol extends AbstractProtocol {
     public static final int DEFAULT_PORT = 20880;
     
     public final ReentrantLock lock = new ReentrantLock();
-    
+
+    /**
+     * 通信服务器集合
+     *
+     * key: 服务器地址。格式为：host:port
+     */
     private final Map<String, ExchangeServer> serverMap = new ConcurrentHashMap<String, ExchangeServer>(); // <host:port,Exchanger>
     
     private final Map<String, ReferenceCountExchangeClient> referenceClientMap = new ConcurrentHashMap<String, ReferenceCountExchangeClient>(); // <host:port,Exchanger>
@@ -250,7 +255,7 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
-        openServer(url);
+        openServer(url); // 启动服务器
         
         return exporter;
     }
@@ -281,7 +286,7 @@ public class DubboProtocol extends AbstractProtocol {
         if (str != null && str.length() > 0 && ! ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str))
             throw new RpcException("Unsupported server type: " + str + ", url: " + url);
 
-        url = url.addParameter(Constants.CODEC_KEY, Version.isCompatibleVersion() ? COMPATIBLE_CODEC_NAME : DubboCodec.NAME);
+        url = url.addParameter(Constants.CODEC_KEY, Version.isCompatibleVersion() ? COMPATIBLE_CODEC_NAME : DubboCodec.NAME); // 设置编解码器为 "Dubbo" 即 DubboCountCodec
         ExchangeServer server;
         try {
             server = Exchangers.bind(url, requestHandler);
@@ -384,7 +389,9 @@ public class DubboProtocol extends AbstractProtocol {
         return client;
     }
 
+    // 先关闭provider，再关闭consumer
     public void destroy() {
+        // 关闭暴露的服务
         for (String key : new ArrayList<String>(serverMap.keySet())) {
             ExchangeServer server = serverMap.remove(key);
             if (server != null) {
@@ -392,13 +399,14 @@ public class DubboProtocol extends AbstractProtocol {
                     if (logger.isInfoEnabled()) {
                         logger.info("Close dubbo server: " + server.getLocalAddress());
                     }
-                    server.close(getServerShutdownTimeout());
+                    server.close(getServerShutdownTimeout()); // 关闭该接口暴露的服务，默认最长等待10秒钟
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);
                 }
             }
         }
-        
+
+        // 关闭对下游服务的调用
         for (String key : new ArrayList<String>(referenceClientMap.keySet())) {
             ExchangeClient client = referenceClientMap.remove(key);
             if (client != null) {

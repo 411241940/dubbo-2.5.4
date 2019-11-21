@@ -32,6 +32,9 @@ public abstract class AbstractExporter<T> implements Exporter<T> {
 
     private final Invoker<T> invoker;
 
+    /**
+     * 是否已取消暴露
+     */
     private volatile boolean unexported = false;
 
     public AbstractExporter(Invoker<T> invoker) {

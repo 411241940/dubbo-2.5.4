@@ -25,6 +25,8 @@ import com.alibaba.dubbo.common.extension.SPI;
 
 /**
  * Serialization. (SPI, Singleton, ThreadSafe)
+ *
+ * 序列化 默认 hessian2
  * 
  * @author ding.lid
  * @author william.liangf

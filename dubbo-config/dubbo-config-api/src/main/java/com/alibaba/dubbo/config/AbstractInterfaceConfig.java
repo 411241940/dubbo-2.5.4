@@ -107,7 +107,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             String address = ConfigUtils.getProperty("dubbo.registry.address");
             if (address != null && address.length() > 0) {
                 registries = new ArrayList<RegistryConfig>();
-                String[] as = address.split("\\s*[|]+\\s*");
+                String[] as = address.split("\\s*[|]+\\s*"); // 多注册中心用 | 分隔
                 for (String a : as) {
                     RegistryConfig registryConfig = new RegistryConfig();
                     registryConfig.setAddress(a);

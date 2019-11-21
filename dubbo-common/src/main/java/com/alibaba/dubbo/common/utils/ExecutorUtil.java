@@ -45,6 +45,8 @@ public class ExecutorUtil {
         }
         return false;
     }
+
+    // 优雅关闭，禁止新的任务提交，将原有任务执行完。
     public static void gracefulShutdown(Executor executor, int timeout) {
         if (!(executor instanceof ExecutorService) || isShutdown(executor)) {
             return;
@@ -57,6 +59,8 @@ public class ExecutorUtil {
         } catch (NullPointerException ex2) {
             return ;
         }
+
+        // 等待原有任务执行完。若等待超时，强制结束所有任务
         try {
             if(! es.awaitTermination(timeout, TimeUnit.MILLISECONDS)) {
                 es.shutdownNow();
@@ -65,6 +69,8 @@ public class ExecutorUtil {
             es.shutdownNow();
             Thread.currentThread().interrupt();
         }
+
+        // 若未关闭成功，新开线程去关闭
         if (!isShutdown(es)){
             newThreadToCloseExecutor(es);
         }
@@ -96,9 +102,10 @@ public class ExecutorUtil {
             shutdownExecutor.execute(new Runnable() {
                 public void run() {
                     try {
+                        // 循环 1000 次，不断强制结束线程池
                         for (int i=0;i<1000;i++){
-                            es.shutdownNow();
-                            if (es.awaitTermination(10, TimeUnit.MILLISECONDS)){
+                            es.shutdownNow(); // 立即关闭，包括原有任务也打断
+                            if (es.awaitTermination(10, TimeUnit.MILLISECONDS)){ // 等待原有任务被打断完成
                                 break;
                             }
                         }

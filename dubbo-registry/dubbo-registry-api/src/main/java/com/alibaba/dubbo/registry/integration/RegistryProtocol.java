@@ -103,12 +103,18 @@ public class RegistryProtocol implements Protocol {
     private final static Logger logger = LoggerFactory.getLogger(RegistryProtocol.class);
     
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
-        //export invoker
+        // 暴露服务
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker);
-        //registry provider
+
+        // 获取注册中心对象
         final Registry registry = getRegistry(originInvoker);
+
+        // 获取服务提供者 URL
         final URL registedProviderUrl = getRegistedProviderUrl(originInvoker);
+
+        // 向注册中心注册服务提供者
         registry.register(registedProviderUrl);
+
         // 订阅override数据
         // FIXME 提供者订阅时，会影响同一JVM即暴露服务，又引用同一服务的的场景，因为subscribed以服务名为缓存的key，导致订阅信息覆盖。
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(registedProviderUrl);
@@ -144,11 +150,11 @@ public class RegistryProtocol implements Protocol {
     @SuppressWarnings("unchecked")
     private <T> ExporterChangeableWrapper<T>  doLocalExport(final Invoker<T> originInvoker){
         String key = getCacheKey(originInvoker);
-        ExporterChangeableWrapper<T> exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
+        ExporterChangeableWrapper<T> exporter = (ExporterChangeableWrapper<T>) bounds.get(key); // 从 bounds 获取，判断是不是已经暴露过服务
         if (exporter == null) {
             synchronized (bounds) {
                 exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
-                if (exporter == null) {
+                if (exporter == null) { // 未暴露过，进行服务暴露
                     final Invoker<?> invokerDelegete = new InvokerDelegete<T>(originInvoker, getProviderUrl(originInvoker));
                     exporter = new ExporterChangeableWrapper<T>((Exporter<T>)protocol.export(invokerDelegete), originInvoker);
                     bounds.put(key, exporter);
@@ -236,13 +242,19 @@ public class RegistryProtocol implements Protocol {
     
     @SuppressWarnings("unchecked")
 	public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
+
+        // 获得真实的注册中心的 URL
         url = url.setProtocol(url.getParameter(Constants.REGISTRY_KEY, Constants.DEFAULT_REGISTRY)).removeParameter(Constants.REGISTRY_KEY);
+
+        // 获得注册中心
         Registry registry = registryFactory.getRegistry(url);
+
         if (RegistryService.class.equals(type)) {
         	return proxyFactory.getInvoker((T) registry, type, url);
         }
 
         // group="a,b" or group="*"
+        // 分组聚合，参见文档 http://dubbo.apache.org/zh-cn/docs/user/demos/group-merger.html
         Map<String, String> qs = StringUtils.parseQueryString(url.getParameterAndDecoded(Constants.REFER_KEY));
         String group = qs.get(Constants.GROUP_KEY);
         if (group != null && group.length() > 0 ) {
@@ -251,6 +263,7 @@ public class RegistryProtocol implements Protocol {
                 return doRefer( getMergeableCluster(), registry, type, url );
             }
         }
+
         return doRefer(cluster, registry, type, url);
     }
     
@@ -262,17 +275,24 @@ public class RegistryProtocol implements Protocol {
         RegistryDirectory<T> directory = new RegistryDirectory<T>(type, url);
         directory.setRegistry(registry);
         directory.setProtocol(protocol);
+
+        // 创建订阅 URL
         URL subscribeUrl = new URL(Constants.CONSUMER_PROTOCOL, NetUtils.getLocalHost(), 0, type.getName(), directory.getUrl().getParameters());
+
+        // 向注册中心注册自己（服务消费者）
         if (! Constants.ANY_VALUE.equals(url.getServiceInterface())
                 && url.getParameter(Constants.REGISTER_KEY, true)) {
             registry.register(subscribeUrl.addParameters(Constants.CATEGORY_KEY, Constants.CONSUMERS_CATEGORY,
                     Constants.CHECK_KEY, String.valueOf(false)));
         }
+
+        // 向注册中心订阅服务提供者 + 路由规则 + 配置规则
+        // 在该方法中，会循环获得到的服务体用这列表，调用 Protocol#refer(type, url) 方法，创建每个调用服务的 Invoker 对象。
         directory.subscribe(subscribeUrl.addParameter(Constants.CATEGORY_KEY, 
                 Constants.PROVIDERS_CATEGORY 
                 + "," + Constants.CONFIGURATORS_CATEGORY 
                 + "," + Constants.ROUTERS_CATEGORY));
-        return cluster.join(directory);
+        return cluster.join(directory); // 创建 Invoker 对象
     }
 
     //过滤URL中不需要输出的参数(以点号开头的)

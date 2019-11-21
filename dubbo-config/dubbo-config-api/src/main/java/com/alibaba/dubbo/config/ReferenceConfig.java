@@ -355,11 +355,11 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 	@SuppressWarnings({ "unchecked", "rawtypes", "deprecation" })
 	private T createProxy(Map<String, String> map) {
 		URL tmpUrl = new URL("temp", "localhost", 0, map);
-		final boolean isJvmRefer;
+		final boolean isJvmRefer; // 是否本地引用
         if (isInjvm() == null) {
-            if (url != null && url.length() > 0) { //指定URL的情况下，不做本地引用
+            if (url != null && url.length() > 0) { // 指定URL（直连服务提供者），不做本地引用
                 isJvmRefer = false;
-            } else if (InjvmProtocol.getInjvmProtocol().isInjvmRefer(tmpUrl)) {
+            } else if (InjvmProtocol.getInjvmProtocol().isInjvmRefer(tmpUrl)) { // 通过 tmpUrl 判断，是否需要本地引用
                 //默认情况下如果本地有服务暴露，则引用本地服务.
                 isJvmRefer = true;
             } else {
@@ -371,7 +371,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
         // 把远端服务转换为 Invoker
         // 调用 Protocol 的 refer 方法生成 Invoker 实例
-		if (isJvmRefer) {
+		if (isJvmRefer) { // 本地引用
 			URL url = new URL(Constants.LOCAL_PROTOCOL, NetUtils.LOCALHOST, 0, interfaceClass.getName()).addParameters(map);
 			invoker = refprotocol.refer(interfaceClass, url);
             if (logger.isInfoEnabled()) {
@@ -386,18 +386,19 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         if (url.getPath() == null || url.getPath().length() == 0) {
                             url = url.setPath(interfaceName);
                         }
-                        if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
+
+                        if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) { // 直连注册中心的地址，带上服务引用的配置参数
                             urls.add(url.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
-                        } else {
+                        } else { // 直连服务提供者的地址
                             urls.add(ClusterUtils.mergeUrl(url, map));
                         }
                     }
                 }
             } else { // 通过注册中心配置拼装URL
-            	List<URL> us = loadRegistries(false);
+            	List<URL> us = loadRegistries(false); // 加载注册中心 URL 数组
             	if (us != null && us.size() > 0) {
                 	for (URL u : us) {
-                	    URL monitorUrl = loadMonitor(u);
+                	    URL monitorUrl = loadMonitor(u); // 加载监控中心 URL
                         if (monitorUrl != null) {
                             map.put(Constants.MONITOR_KEY, URL.encode(monitorUrl.toFullString()));
                         }
@@ -410,8 +411,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
 
             if (urls.size() == 1) {
-                invoker = refprotocol.refer(interfaceClass, urls.get(0));
-            } else {
+                invoker = refprotocol.refer(interfaceClass, urls.get(0)); // 单 urls 时，引用服务，返回 Invoker 对象
+            } else { // 遍历 `urls` ，引用服务，返回 Invoker 对象
                 List<Invoker<?>> invokers = new ArrayList<Invoker<?>>();
                 URL registryURL = null;
                 for (URL url : urls) {

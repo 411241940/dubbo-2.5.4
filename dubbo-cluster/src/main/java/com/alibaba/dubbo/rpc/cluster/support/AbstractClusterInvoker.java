@@ -45,10 +45,17 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
                                                                                          .getLogger(AbstractClusterInvoker.class);
     protected final Directory<T>               directory;
 
-    protected final boolean                    availablecheck;
+    protected final boolean                    availablecheck; // 集群时校验是否可用，默认为 true
     
     private volatile boolean                   destroyed = false;
 
+    /**
+     * 粘滞连接 Invoker
+     *
+     * http://dubbo.apache.org/zh-cn/docs/user/demos/stickiness.html
+     * 粘滞连接用于有状态服务，尽可能让客户端总是向同一提供者发起调用，除非该提供者挂了，再连另一台。
+     * 粘滞连接将自动开启延迟连接，以减少长连接数。
+     */
     private volatile Invoker<T>                stickyInvoker                     = null;
 
     public AbstractClusterInvoker(Directory<T> directory) {
@@ -255,7 +262,8 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
     protected abstract Result doInvoke(Invocation invocation, List<Invoker<T>> invokers,
                                        LoadBalance loadbalance) throws RpcException;
-    
+
+    // 获得所有服务提供者 Invoker 集合
     protected  List<Invoker<T>> list(Invocation invocation) throws RpcException {
     	List<Invoker<T>> invokers = directory.list(invocation);
     	return invokers;

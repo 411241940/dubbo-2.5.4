@@ -108,7 +108,13 @@ public class HeaderExchangeServer implements ExchangeServer {
             if (getUrl().getParameter(Constants.CHANNEL_SEND_READONLYEVENT_KEY, false)){
                 sendChannelReadOnlyEvent();
             }
-            while (HeaderExchangeServer.this.isRunning() 
+
+            // 如果还有进行中的任务并且没有到达等待时间的上限，则继续等待。
+            // 这里会有个小问题，因为provider从注册中心撤销服务和上游consumer将其服务从服务列表中删除并不是原子操作，
+            // 如果集群规模过大，可能导致上游consumer的服务列表还未更新完成，我们的provider这时发现当前没有进行中的调用就立马关闭服务暴露，导致上游consumer调用该服务失败。
+            // 所以，dubbo默认的这种优雅停机方案，需要建立在上游consumer有重试机制的基础之上，但由于consumer增加重试特性会增加故障时的雪崩风险，所以大多数分布式服务不愿意增加服务内部之间的重试机制。
+            // 只要用一个参数来设置等待下限，这样整个分布式系统几乎不需要通过重试来保证优雅停机，只需要给与上游consumer少许时间，让他们足够有机会更新完provider的列表就行
+            while (HeaderExchangeServer.this.isRunning()
                     && System.currentTimeMillis() - start < max) {
                 try {
                     Thread.sleep(10);
@@ -117,8 +123,8 @@ public class HeaderExchangeServer implements ExchangeServer {
                 }
             }
         }
-        doClose();
-        server.close(timeout);
+        doClose(); // 关闭心跳，停止应答
+        server.close(timeout); // 关闭通信通道
     }
     
     private void sendChannelReadOnlyEvent(){

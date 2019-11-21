@@ -27,6 +27,8 @@ public interface ExporterListener {
 
     /**
      * The exporter exported.
+     *
+     * 暴露监听方法
      * 
      * @see com.alibaba.dubbo.rpc.Protocol#export(Invoker)
      * @param exporter
@@ -36,6 +38,8 @@ public interface ExporterListener {
 
     /**
      * The exporter unexported.
+     *
+     * 取消暴露监听方法
      * 
      * @see com.alibaba.dubbo.rpc.Exporter#unexport()
      * @param exporter

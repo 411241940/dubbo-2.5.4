@@ -51,6 +51,7 @@ public class ProtocolFilterWrapper implements Protocol {
     }
 
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
+        // 注册中心的 URL ，无需构造 Filter 责任链
         if (Constants.REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
             return protocol.export(invoker);
         }
