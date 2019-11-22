@@ -26,6 +26,18 @@ import com.alibaba.dubbo.common.URL;
 
 public class UrlUtils {
 
+    /**
+     * 解析单个 URL ，将 `defaults` 里的参数，合并到 `address` 中。
+     *
+     * 合并的逻辑如下：
+     *
+     * 我们可以把 `address` 认为是 url ；`defaults` 认为是 defaultURL 。
+     * 若 url 有不存在的属性时，从 defaultURL 获得对应的属性，设置到 url 中。
+     *
+     * @param address 地址
+     * @param defaults 默认参数集合
+     * @return URL
+     */
     public static URL parseURL(String address, Map<String, String> defaults) {
         if (address == null || address.length() == 0) {
             return null;

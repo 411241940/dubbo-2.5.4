@@ -70,9 +70,17 @@ public class ExtensionLoader<T> {
     private static final String DUBBO_INTERNAL_DIRECTORY = DUBBO_DIRECTORY + "internal/";
 
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[,]+\\s*");
-    
+
+    /**
+     * ExtensionLoader 缓存
+     * Class<?> -> ExtensionLoader<?>
+     * 对于每一个拓展,都会有且只有一个ExtensionLoader与其对应
+     */
     private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<Class<?>, ExtensionLoader<?>>();
 
+    /**
+     * instance 缓存
+     */
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<Class<?>, Object>();
 
     // ==============================
@@ -580,7 +588,7 @@ public class ExtensionLoader<T> {
 	    return clazz;
 	}
 
-    // spi扩展加载
+    // 加载所有扩展实现类
 	private Map<String, Class<?>> getExtensionClasses() {
         Map<String, Class<?>> classes = cachedClasses.get();
         if (classes == null) {
@@ -597,6 +605,8 @@ public class ExtensionLoader<T> {
 
     // 此方法已经getExtensionClasses方法同步(加锁)过。
     private Map<String, Class<?>> loadExtensionClasses() {
+
+        // 设置默认的拓展类名
         final SPI defaultAnnotation = type.getAnnotation(SPI.class);
         if(defaultAnnotation != null) {
             String value = defaultAnnotation.value();
