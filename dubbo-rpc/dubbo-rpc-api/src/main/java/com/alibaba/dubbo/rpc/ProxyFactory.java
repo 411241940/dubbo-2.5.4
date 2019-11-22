@@ -22,6 +22,8 @@ import com.alibaba.dubbo.common.extension.SPI;
 
 /**
  * ProxyFactory. (API/SPI, Singleton, ThreadSafe)
+ *
+ * 动态代理，javassist字节码性能比较高所以作为默认
  * 
  * @author william.liangf
  */

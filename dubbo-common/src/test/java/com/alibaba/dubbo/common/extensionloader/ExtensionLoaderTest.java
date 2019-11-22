@@ -390,7 +390,7 @@ public class ExtensionLoaderTest {
     @Test
     public void testLoadDefaultActivateExtension() throws Exception {
         // test default
-        URL url = URL.valueOf("test://localhost/test?ext=order1,default");
+        URL url = URL.valueOf("test://localhost/test?ext=order1");
         List<ActivateExt1> list = ExtensionLoader.getExtensionLoader(ActivateExt1.class)
                 .getActivateExtension(url, "ext", "default_group");
         Assert.assertEquals(2, list.size());

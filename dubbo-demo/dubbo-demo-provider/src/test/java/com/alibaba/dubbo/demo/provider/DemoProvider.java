@@ -15,9 +15,13 @@
  */
 package com.alibaba.dubbo.demo.provider;
 
+import com.alibaba.dubbo.check.ICheck;
+import com.alibaba.dubbo.common.extension.ExtensionLoader;
+
 public class DemoProvider {
 
 	public static void main(String[] args) {
+//		System.out.println(ExtensionLoader.getExtensionLoader(ICheck.class).getExtension("old").check());
         com.alibaba.dubbo.container.Main.main(args);
 	}
 

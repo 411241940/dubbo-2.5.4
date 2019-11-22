@@ -42,6 +42,8 @@ public class ListenerExporterWrapper<T> implements Exporter<T> {
         }
         this.exporter = exporter;
         this.listeners = listeners;
+
+        // 遍历监听器执行 exported 方法
         if (listeners != null && listeners.size() > 0) {
             RuntimeException exception = null;
             for (ExporterListener listener : listeners) {
@@ -70,6 +72,8 @@ public class ListenerExporterWrapper<T> implements Exporter<T> {
         } finally {
             if (listeners != null && listeners.size() > 0) {
                 RuntimeException exception = null;
+
+                // 遍历监听器执行 unexported 方法
                 for (ExporterListener listener : listeners) {
                     if (listener != null) {
                         try {

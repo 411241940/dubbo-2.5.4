@@ -426,7 +426,11 @@ public class ProtocolConfig extends AbstractConfig {
     }
 
     public static void destroyAll() {
+
+        // 和注册中心断连
         AbstractRegistryFactory.destroyAll();
+
+        // 关闭协议暴露（包括provider和consumer）
         ExtensionLoader<Protocol> loader = ExtensionLoader.getExtensionLoader(Protocol.class);
         for (String protocolName : loader.getLoadedExtensions()) {
             try {

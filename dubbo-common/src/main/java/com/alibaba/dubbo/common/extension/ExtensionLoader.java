@@ -195,6 +195,8 @@ public class ExtensionLoader<T> {
      *     getActivateExtension(url, url.getParameter(key).split(","), null);
      * </pre>
      *
+     * 获得符合自动激活条件的拓展对象数组
+     *
      * @see #getActivateExtension(com.alibaba.dubbo.common.URL, String[], String)
      * @param url url
      * @param key url parameter key which used to get extension point names
@@ -218,28 +220,34 @@ public class ExtensionLoader<T> {
     public List<T> getActivateExtension(URL url, String[] values, String group) {
         List<T> exts = new ArrayList<T>();
         List<String> names = values == null ? new ArrayList<String>(0) : Arrays.asList(values);
+
+        // 判断不存在配置 `"-name"` 。例如，<dubbo:service filter="-default" /> ，代表移除所有默认过滤器。
         if (! names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
             getExtensionClasses();
             for (Map.Entry<String, Activate> entry : cachedActivates.entrySet()) {
                 String name = entry.getKey();
                 Activate activate = entry.getValue();
-                if (isMatchGroup(group, activate.group())) {
+                if (isMatchGroup(group, activate.group())) { // 匹配group
                     T ext = getExtension(name);
-                    if (! names.contains(name)
-                            && ! names.contains(Constants.REMOVE_VALUE_PREFIX + name) 
-                            && isActive(activate, url)) {
+                    if (! names.contains(name) // 不包含在自定义配置里。如果包含，会在下面的代码处理
+                            && ! names.contains(Constants.REMOVE_VALUE_PREFIX + name)  // 判断是否配置移除。例如 <dubbo:service filter="-monitor" />，则 MonitorFilter 会被移除
+                            && isActive(activate, url)) { // 是否激活
                         exts.add(ext);
                     }
                 }
             }
-            Collections.sort(exts, ActivateComparator.COMPARATOR);
+            Collections.sort(exts, ActivateComparator.COMPARATOR); // 排序
         }
+
+        // 处理 key 指定的扩展对象。例如在 <dubbo:service filter="demo" /> ，代表需要加入 DemoFilter
         List<T> usrs = new ArrayList<T>();
         for (int i = 0; i < names.size(); i ++) {
         	String name = names.get(i);
             if (! name.startsWith(Constants.REMOVE_VALUE_PREFIX)
             		&& ! names.contains(Constants.REMOVE_VALUE_PREFIX + name)) {
-            	if (Constants.DEFAULT_KEY.equals(name)) {
+
+                // 将 key 指定的扩展对象放到自动激活的扩展对象们前面
+                if (Constants.DEFAULT_KEY.equals(name)) {
             		if (usrs.size() > 0) {
 	            		exts.addAll(0, usrs);
 	            		usrs.clear();
@@ -477,7 +485,7 @@ public class ExtensionLoader<T> {
     public T getAdaptiveExtension() {
         Object instance = cachedAdaptiveInstance.get();
         if (instance == null) {
-            if(createAdaptiveInstanceError == null) {
+            if(createAdaptiveInstanceError == null) { // 若之前创建报错
                 synchronized (cachedAdaptiveInstance) {
                     instance = cachedAdaptiveInstance.get();
                     if (instance == null) {
@@ -765,7 +773,7 @@ public class ExtensionLoader<T> {
     
     private Class<?> getAdaptiveExtensionClass() {
         getExtensionClasses();
-        if (cachedAdaptiveClass != null) { // 该类型有 @Adaptive 类，直接返回
+        if (cachedAdaptiveClass != null) { // 已创建 AdaptiveClass
             return cachedAdaptiveClass;
         }
         return cachedAdaptiveClass = createAdaptiveExtensionClass();
@@ -871,7 +879,7 @@ public class ExtensionLoader<T> {
                 }
                 
                 String[] value = adaptiveAnnotation.value();
-                // 没有设置Key，则使用“扩展点接口名的点分隔 作为Key
+                // 没有设置Key，则使用扩展点接口名 驼峰转 "." 分隔 作为Key
                 if(value.length == 0) {
                     char[] charArray = type.getSimpleName().toCharArray();
                     StringBuilder sb = new StringBuilder(128);

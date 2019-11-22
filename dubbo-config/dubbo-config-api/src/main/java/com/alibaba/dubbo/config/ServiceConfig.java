@@ -80,6 +80,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     private ProviderConfig provider;
 
+    /**
+     * 已暴露服务 URL 数组
+     */
     private final List<URL> urls = new ArrayList<URL>();
 
     /**
@@ -305,10 +308,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void doExportUrls() {
-        // 加载注册中心 URL 数组
         List<URL> registryURLs = loadRegistries(true);
-
-        // 循环 `protocols` ，向逐个注册中心分组暴露服务。
         for (ProtocolConfig protocolConfig : protocols) {
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
@@ -497,7 +497,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         }
 
         String scope = url.getParameter(Constants.SCOPE_KEY);
-        //配置为none不暴露
+        // 配置为 "none" 不暴露， 未配置时会暴露 Local + Remote 两个
         if (! Constants.SCOPE_NONE.toString().equalsIgnoreCase(scope)) {
 
             //配置不是remote的情况下做本地暴露 (配置为remote，则表示只暴露远程服务)
@@ -512,25 +512,36 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 if (registryURLs != null && registryURLs.size() > 0
                         && url.getParameter("register", true)) {
                     for (URL registryURL : registryURLs) {
+
+                        // "dynamic" ：服务是否动态注册，如果设为false，注册后将显示后disable状态，需人工启用，并且服务提供者停止时，也不会自动取消册，需人工禁用。
                         url = url.addParameterIfAbsent("dynamic", registryURL.getParameter("dynamic"));
+
+                        // 获得监控中心 URL
                         URL monitorUrl = loadMonitor(registryURL);
                         if (monitorUrl != null) {
-                            url = url.addParameterAndEncoded(Constants.MONITOR_KEY, monitorUrl.toFullString());
+                            url = url.addParameterAndEncoded(Constants.MONITOR_KEY, monitorUrl.toFullString()); // 将监控中心的 URL 添加到服务提供者的 URL 中
                         }
+
                         if (logger.isInfoEnabled()) {
                             logger.info("Register dubbo service " + interfaceClass.getName() + " url " + url + " to registry " + registryURL);
                         }
 
-                        // 具体服务到 Invoker 的转换
+                        // 使用 ProxyFactory 创建 Invoker 对象。该 Invoker 对象，执行 #invoke(invocation) 方法时，会动态代理调用 Service 对象对应的方法
+                        // 传入的 URL 是注册中心的 URL 。 在 RegistryProtocol 中实现类似 AOP 的效果，先在本地服务器启动完成后，再向注册中心注册
                         Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(Constants.EXPORT_KEY, url.toFullString()));
 
                         // Invoker 转换为 Exporter
+                        // 使用 Protocol 暴露 Invoker 对象
                         Exporter<?> exporter = protocol.export(invoker);
                         exporters.add(exporter);
                     }
-                } else {
+                } else { // 直连提供者， http://dubbo.apache.org/zh-cn/docs/user/demos/explicit-target.html
+
+                    // 使用 ProxyFactory 创建 Invoker 对象
                     Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, url);
 
+                    // Invoker 转换为 Exporter
+                    // 使用 Protocol 暴露 Invoker 对象
                     Exporter<?> exporter = protocol.export(invoker);
                     exporters.add(exporter);
                 }
@@ -539,18 +550,20 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         this.urls.add(url);
     }
 
-
+    /**
+     * 暴露本地服务
+     * @param url
+     */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void exportLocal(URL url) {
         if (!Constants.LOCAL_PROTOCOL.equalsIgnoreCase(url.getProtocol())) {
-
-            // 创建本地服务 URL
+            // 基于原有 URL ，创建本地 URL 对象
             URL local = URL.valueOf(url.toFullString())
                     .setProtocol(Constants.LOCAL_PROTOCOL) // injvm
                     .setHost(NetUtils.LOCALHOST)
                     .setPort(0);
 
-            // 使用 ProxyFactory 创建 Invoker 对象
+            // 使用 ProxyFactory 创建 Invoker 对象，该 Invoker 对象，执行 #invoke(invocation) 方法时，会动态代理调用 Service( ref ) 对应的方法。
             // 使用 Protocol 暴露 Invoker 对象
             Exporter<?> exporter = protocol.export(
                     proxyFactory.getInvoker(ref, (Class) interfaceClass, local));
