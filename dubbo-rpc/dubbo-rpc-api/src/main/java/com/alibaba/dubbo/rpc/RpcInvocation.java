@@ -61,7 +61,7 @@ public class RpcInvocation implements Invocation, Serializable {
                 setAttachment(Constants.GROUP_KEY, url.getParameter(Constants.GROUP_KEY));
             }
             if (url.hasParameter(Constants.VERSION_KEY)) {
-                setAttachment(Constants.VERSION_KEY, url.getParameter(Constants.VERSION_KEY, "0.0.0"));
+                setAttachment(Constants.VERSION_KEY, url.getParameter(Constants.VERSION_KEY, "0.0.0")); // 服务版本，默认0.0.0
             }
             if (url.hasParameter(Constants.TIMEOUT_KEY)) {
                 setAttachment(Constants.TIMEOUT_KEY, url.getParameter(Constants.TIMEOUT_KEY));

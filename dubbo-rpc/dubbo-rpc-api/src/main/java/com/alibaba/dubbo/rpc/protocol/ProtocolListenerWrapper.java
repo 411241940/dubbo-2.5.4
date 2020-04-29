@@ -33,7 +33,7 @@ import com.alibaba.dubbo.rpc.listener.ListenerInvokerWrapper;
 /**
  * ListenerProtocol
  *
- * 给 Exporter 增加 ExporterListener ，监听 Exporter 暴露完成和取消暴露完成。
+ * 给 Exporter、Invoker 增加 ExporterListener ，监听 Exporter、Invoker 暴露(引用)完成和取消暴露(引用)完成。
  * 
  * @author william.liangf
  */

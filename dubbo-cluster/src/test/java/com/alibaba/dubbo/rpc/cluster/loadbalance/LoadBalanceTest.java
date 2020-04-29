@@ -73,26 +73,31 @@ public class LoadBalanceTest {
         invoker5 = EasyMock.createMock(Invoker.class);
         
         URL url = URL.valueOf("test://127.0.0.1/DemoService");
-        
+        URL url1 = url.addParameter(Constants.WEIGHT_KEY, 50);
+        URL url2 = url.addParameter(Constants.WEIGHT_KEY, 40);
+        URL url3 = url.addParameter(Constants.WEIGHT_KEY, 30);
+        URL url4 = url.addParameter(Constants.WEIGHT_KEY, 20);
+        URL url5 = url.addParameter(Constants.WEIGHT_KEY, 10);
+
         EasyMock.expect(invoker1.isAvailable()).andReturn(true).anyTimes();
         EasyMock.expect(invoker1.getInterface()).andReturn(LoadBalanceTest.class).anyTimes();
-        EasyMock.expect(invoker1.getUrl()).andReturn(url).anyTimes();
-        
+        EasyMock.expect(invoker1.getUrl()).andReturn(url1).anyTimes();
+
         EasyMock.expect(invoker2.isAvailable()).andReturn(true).anyTimes();
         EasyMock.expect(invoker2.getInterface()).andReturn(LoadBalanceTest.class).anyTimes();
-        EasyMock.expect(invoker2.getUrl()).andReturn(url).anyTimes();
+        EasyMock.expect(invoker2.getUrl()).andReturn(url2).anyTimes();
         
         EasyMock.expect(invoker3.isAvailable()).andReturn(true).anyTimes();
         EasyMock.expect(invoker3.getInterface()).andReturn(LoadBalanceTest.class).anyTimes();
-        EasyMock.expect(invoker3.getUrl()).andReturn(url).anyTimes();
+        EasyMock.expect(invoker3.getUrl()).andReturn(url3).anyTimes();
         
         EasyMock.expect(invoker4.isAvailable()).andReturn(true).anyTimes();
         EasyMock.expect(invoker4.getInterface()).andReturn(LoadBalanceTest.class).anyTimes();
-        EasyMock.expect(invoker4.getUrl()).andReturn(url).anyTimes();
+        EasyMock.expect(invoker4.getUrl()).andReturn(url4).anyTimes();
         
         EasyMock.expect(invoker5.isAvailable()).andReturn(true).anyTimes();
         EasyMock.expect(invoker5.getInterface()).andReturn(LoadBalanceTest.class).anyTimes();
-        EasyMock.expect(invoker5.getUrl()).andReturn(url).anyTimes();
+        EasyMock.expect(invoker5.getUrl()).andReturn(url5).anyTimes();
         
         EasyMock.replay(invocation,invoker1,invoker2,invoker3,invoker4,invoker5);
         

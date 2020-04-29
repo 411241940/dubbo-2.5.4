@@ -87,6 +87,10 @@ public class ExtensionLoader<T> {
 
     private final Class<?> type;
 
+    /**
+     * IOC 注入工厂
+     * @see com.alibaba.dubbo.common.extension.factory.AdaptiveExtensionFactory
+     */
     private final ExtensionFactory objectFactory;
 
     /**
@@ -107,6 +111,8 @@ public class ExtensionLoader<T> {
 
     /**
      * Adaptive 类
+     * @Adaptive 打在类上，则该类直接为Adaptive实现类，优先级最高，如 {@link com.alibaba.dubbo.common.extension.factory.AdaptiveExtensionFactory}
+     * @Adaptive 打在方法上，拼接生成 Adaptive 类。 该方法作用是在url上找该key的Value作为要Adapt成的Extension名
      */
     private volatile Class<?> cachedAdaptiveClass = null;
 
@@ -218,10 +224,10 @@ public class ExtensionLoader<T> {
      * @return extension list which are activated
      */
     public List<T> getActivateExtension(URL url, String[] values, String group) {
-        List<T> exts = new ArrayList<T>();
+        List<T> exts = new ArrayList<T>(); // 默认的扩展对象
         List<String> names = values == null ? new ArrayList<String>(0) : Arrays.asList(values);
 
-        // 判断不存在配置 `"-name"` 。例如，<dubbo:service filter="-default" /> ，代表移除所有默认过滤器。
+        // 处理默认激活的扩展对象
         if (! names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
             getExtensionClasses();
             for (Map.Entry<String, Activate> entry : cachedActivates.entrySet()) {
@@ -240,13 +246,13 @@ public class ExtensionLoader<T> {
         }
 
         // 处理 key 指定的扩展对象。例如在 <dubbo:service filter="demo" /> ，代表需要加入 DemoFilter
-        List<T> usrs = new ArrayList<T>();
+        List<T> usrs = new ArrayList<T>(); // 指定 key 的扩展对象
         for (int i = 0; i < names.size(); i ++) {
         	String name = names.get(i);
             if (! name.startsWith(Constants.REMOVE_VALUE_PREFIX)
             		&& ! names.contains(Constants.REMOVE_VALUE_PREFIX + name)) {
 
-                // 将 key 指定的扩展对象放到自动激活的扩展对象们前面
+                // 将 key 指定的扩展对象放到默认的扩展对象们前面。例如，<dubbo:service filter="demo,default,demo2" /> ，则 DemoFilter 就会放在默认的过滤器前面。
                 if (Constants.DEFAULT_KEY.equals(name)) {
             		if (usrs.size() > 0) {
 	            		exts.addAll(0, usrs);
@@ -672,18 +678,18 @@ public class ExtensionLoader<T> {
                                         }
                                         if (line.length() > 0) {
                                             Class<?> clazz = Class.forName(line, true, classLoader); // 加载class
-                                            if (! type.isAssignableFrom(clazz)) {
+                                            if (! type.isAssignableFrom(clazz)) { // 是否为继承类
                                                 throw new IllegalStateException("Error when load extension class(interface: " +
                                                         type + ", class line: " + clazz.getName() + "), class " 
                                                         + clazz.getName() + "is not subtype of interface.");
                                             }
-                                            if (clazz.isAnnotationPresent(Adaptive.class)) {
+                                            if (clazz.isAnnotationPresent(Adaptive.class)) { // 类上有 @Adaptive 注解
                                                 if(cachedAdaptiveClass == null) {
-                                                    cachedAdaptiveClass = clazz; // 如果类上有 @Adaptive 注解，就将此类作为cachedAdaptiveClass
+                                                    cachedAdaptiveClass = clazz; // 如果类上有 @Adaptive 注解，就将此类作为cachedAdaptiveClass，优先级最高
                                                 } else if (! cachedAdaptiveClass.equals(clazz)) {
                                                     throw new IllegalStateException("More than 1 adaptive class found: "
                                                             + cachedAdaptiveClass.getClass().getName()
-                                                            + ", " + clazz.getClass().getName()); // 同一类型有多个adaptive类，报错
+                                                            + ", " + clazz.getClass().getName()); // 同一扩展点只能有一个Adaptive类，否则报错
                                                 }
                                             } else { // 类上没有 @Adaptive 注解
                                                 try {
@@ -707,7 +713,7 @@ public class ExtensionLoader<T> {
                                                             }
                                                         }
                                                     }
-                                                    String[] names = NAME_SEPARATOR.split(name);
+                                                    String[] names = NAME_SEPARATOR.split(name); // key 支持多对一 "," 分隔
                                                     if (names != null && names.length > 0) {
                                                         Activate activate = clazz.getAnnotation(Activate.class); // 类是否有 @Activate 注解
                                                         if (activate != null) {

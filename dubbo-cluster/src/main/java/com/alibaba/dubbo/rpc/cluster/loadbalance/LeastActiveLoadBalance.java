@@ -46,7 +46,10 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
         for (int i = 0; i < length; i++) {
         	Invoker<T> invoker = invokers.get(i);
             int active = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName()).getActive(); // 活跃数
+
+            // 此处权重没经过预热
             int weight = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.WEIGHT_KEY, Constants.DEFAULT_WEIGHT); // 权重
+
             if (leastActive == -1 || active < leastActive) { // 发现更小的活跃数，重新开始
                 leastActive = active; // 记录最小活跃数
                 leastCount = 1; // 重新统计相同最小活跃数的个数
@@ -69,13 +72,20 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
             // 如果只有一个最小则直接返回
             return invokers.get(leastIndexs[0]);
         }
+
+        // 相同最小活跃数的个数有多个
         if (! sameWeight && totalWeight > 0) {
+
             // 如果权重不相同且权重大于0则按总权重数随机
-            int offsetWeight = random.nextInt(totalWeight);
+            int offsetWeight = random.nextInt(totalWeight); // [0，totalWeight)
+
             // 并确定随机值落在哪个片断上
             for (int i = 0; i < leastCount; i++) {
                 int leastIndex = leastIndexs[i];
+
+                // 未预热的总权重 - 预热的权重，导致 offsetWeight 有可能减完仍然大于0，使最小活跃数失效，降级为均等随机
                 offsetWeight -= getWeight(invokers.get(leastIndex), invocation);
+
                 if (offsetWeight <= 0)
                     return invokers.get(leastIndex);
             }

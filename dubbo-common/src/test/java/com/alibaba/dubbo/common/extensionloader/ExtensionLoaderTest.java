@@ -392,7 +392,7 @@ public class ExtensionLoaderTest {
         // test default
         URL url = URL.valueOf("test://localhost/test?ext=order1");
         List<ActivateExt1> list = ExtensionLoader.getExtensionLoader(ActivateExt1.class)
-                .getActivateExtension(url, "ext", "default_group");
+                .getActivateExtension(url, new String[]{"order1","activate"}, "default_group");
         Assert.assertEquals(2, list.size());
         Assert.assertTrue(list.get(0).getClass() == OrderActivateExtImpl1.class);
         Assert.assertTrue(list.get(1).getClass() == ActivateExt1Impl1.class);

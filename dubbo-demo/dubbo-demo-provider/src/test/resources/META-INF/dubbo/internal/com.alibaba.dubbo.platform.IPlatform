@@ -1,0 +1,2 @@
+EBAY=com.alibaba.dubbo.platform.EbayPlatform
+AWS=com.alibaba.dubbo.platform.AwsPlatform

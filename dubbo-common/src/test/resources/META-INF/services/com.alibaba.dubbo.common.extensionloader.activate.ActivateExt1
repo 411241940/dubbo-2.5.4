@@ -1,1 +1,1 @@
-com.alibaba.dubbo.common.extensionloader.activate.impl.ActivateExt1Impl1
+activate=com.alibaba.dubbo.common.extensionloader.activate.impl.ActivateExt1Impl1
