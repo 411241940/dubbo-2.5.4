@@ -556,15 +556,16 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void exportLocal(URL url) {
+        // 如果 URL 的协议头等于 injvm，说明已经导出到本地了，无需再次导出
         if (!Constants.LOCAL_PROTOCOL.equalsIgnoreCase(url.getProtocol())) {
-            // 基于原有 URL ，创建本地 URL 对象
+            // 将协议头、主机名以及端口设置成本地值
             URL local = URL.valueOf(url.toFullString())
                     .setProtocol(Constants.LOCAL_PROTOCOL) // injvm
-                    .setHost(NetUtils.LOCALHOST)
+                    .setHost(NetUtils.LOCALHOST) // 127.0.0.1
                     .setPort(0);
 
             // 使用 ProxyFactory 创建 Invoker 对象，该 Invoker 对象，执行 #invoke(invocation) 方法时，会动态代理调用 Service( ref ) 对应的方法。
-            // 使用 Protocol 暴露 Invoker 对象
+            // 使用 Protocol 暴露 Invoker 对象，因为上面设置协议为injvm，所以 protocol 会在运行时调用 InjvmProtocol 的 export 方法
             Exporter<?> exporter = protocol.export(
                     proxyFactory.getInvoker(ref, (Class) interfaceClass, local));
 

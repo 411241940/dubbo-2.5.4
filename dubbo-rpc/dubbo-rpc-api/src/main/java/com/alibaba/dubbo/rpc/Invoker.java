@@ -19,6 +19,7 @@ import com.alibaba.dubbo.common.Node;
 
 /**
  * Invoker. (API/SPI, Prototype, ThreadSafe)
+ * 在服务提供方，Invoker 用于调用服务提供类。在服务消费方，Invoker 用于执行远程调用
  * 
  * @see com.alibaba.dubbo.rpc.Protocol#refer(Class, com.alibaba.dubbo.common.URL)
  * @see com.alibaba.dubbo.rpc.InvokerListener

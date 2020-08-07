@@ -21,7 +21,9 @@
 	http://code.alibabatech.com/schema/dubbo http://code.alibabatech.com/schema/dubbo/dubbo.xsd">
 	
 	<bean id="demoService" class="com.alibaba.dubbo.demo.provider.DemoServiceImpl" />
-	
+	<bean id="demoService2" class="com.alibaba.dubbo.demo.provider.DemoService2Impl" />
+
 	<dubbo:service interface="com.alibaba.dubbo.demo.DemoService" ref="demoService" filter="token,default" />
-	
+	<dubbo:service interface="com.alibaba.dubbo.demo.DemoService2" ref="demoService2" filter="token,default" />
+
 </beans>

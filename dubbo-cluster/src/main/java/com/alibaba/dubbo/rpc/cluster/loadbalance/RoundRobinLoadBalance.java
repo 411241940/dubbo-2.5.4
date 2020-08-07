@@ -58,6 +58,7 @@ public class RoundRobinLoadBalance extends AbstractLoadBalance {
 		}
 	}
 
+	// 这个算法不平滑，而且存在性能问题
 	protected <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation) {
 		String key = invokers.get(0).getUrl().getServiceKey() + "." + invocation.getMethodName();
 		int length = invokers.size(); // 总个数
@@ -81,12 +82,14 @@ public class RoundRobinLoadBalance extends AbstractLoadBalance {
 		}
 		int currentSequence = sequence.getAndIncrement();
 		if (maxWeight > 0 && minWeight < maxWeight) { // 权重不一样
-			int mod = currentSequence % weightSum;
+			int mod = currentSequence % weightSum; // mod 是 [0,weightSum) 范围内的值
+
+			// 这个循环最大次数为：maxWeight * invoker个数。有性能问题
 			for (int i = 0; i < maxWeight; i++) {
 				for (Map.Entry<Invoker<T>, IntegerWrapper> each : invokerToWeightMap.entrySet()) {
 					final Invoker<T> k = each.getKey();
 					final IntegerWrapper v = each.getValue();
-					if (mod == 0 && v.getValue() > 0) {
+					if (mod == 0 && v.getValue() > 0) { // 假如总权重很大，导致mod非常大，会产生性能问题
 						return k;
 					}
 					if (v.getValue() > 0) {

@@ -236,9 +236,10 @@ public class DubboProtocol extends AbstractProtocol {
         URL url = invoker.getUrl();
         
         // export service.
+        // demoGroup/com.alibaba.dubbo.demo.DemoService:1.0.1:20880
         String key = serviceKey(url);
-        DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
-        exporterMap.put(key, exporter);
+        DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap); // 创建 DubboExporter
+        exporterMap.put(key, exporter); // exporter 放入缓存
         
         //export an stub service for dispaching event
         Boolean isStubSupportEvent = url.getParameter(Constants.STUB_EVENT_KEY,Constants.DEFAULT_STUB_EVENT);
@@ -261,25 +262,26 @@ public class DubboProtocol extends AbstractProtocol {
     }
     
     private void openServer(URL url) {
-        // find server.
+        // find server. host:port ，并将其作为服务器实例的 key，用于标识当前的服务器实例
         String key = url.getAddress();
         //client 也可以暴露一个只有server可以调用的服务。
         boolean isServer = url.getParameter(Constants.IS_SERVER_KEY,true);
         if (isServer) {
         	ExchangeServer server = serverMap.get(key);
         	if (server == null) {
+                // 创建服务器实例
         		serverMap.put(key, createServer(url));
         	} else {
-        		//server支持reset,配合override功能使用
+                // 服务器已创建，则根据 url 中的配置重置服务器，配合 override 监听功能使用
         		server.reset(url);
         	}
         }
     }
     
     private ExchangeServer createServer(URL url) {
-        //默认开启server关闭时发送readonly事件
+        // 默认开启server关闭时发送readonly事件
         url = url.addParameterIfAbsent(Constants.CHANNEL_READONLYEVENT_SENT_KEY, Boolean.TRUE.toString());
-        //默认开启heartbeat
+        // 默认开启heartbeat
         url = url.addParameterIfAbsent(Constants.HEARTBEAT_KEY, String.valueOf(Constants.DEFAULT_HEARTBEAT));
         String str = url.getParameter(Constants.SERVER_KEY, Constants.DEFAULT_REMOTING_SERVER);
 
@@ -289,6 +291,7 @@ public class DubboProtocol extends AbstractProtocol {
         url = url.addParameter(Constants.CODEC_KEY, Version.isCompatibleVersion() ? COMPATIBLE_CODEC_NAME : DubboCodec.NAME); // 设置编解码器为 "Dubbo" 即 DubboCountCodec
         ExchangeServer server;
         try {
+            // 创建服务器实例
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);

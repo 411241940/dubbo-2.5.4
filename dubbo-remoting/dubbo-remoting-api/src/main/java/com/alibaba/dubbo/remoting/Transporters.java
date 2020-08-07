@@ -64,6 +64,7 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+        // 根据 URL 获取对应 Transporter 实现，默认 NettyTransporter
         return getTransporter().connect(url, handler);
     }
 

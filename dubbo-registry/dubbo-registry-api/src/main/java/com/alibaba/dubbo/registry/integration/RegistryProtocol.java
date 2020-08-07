@@ -101,12 +101,19 @@ public class RegistryProtocol implements Protocol {
     private final Map<String, ExporterChangeableWrapper<?>> bounds = new ConcurrentHashMap<String, ExporterChangeableWrapper<?>>();
     
     private final static Logger logger = LoggerFactory.getLogger(RegistryProtocol.class);
-    
+
+    /**
+     * 暴露服务与服务注册
+     * @param originInvoker
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
         // 暴露服务
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker);
 
-        // 获取注册中心对象
+        // 获取注册中心对象，根据 URL 加载 Registry 实现类，比如 ZookeeperRegistry
         final Registry registry = getRegistry(originInvoker);
 
         // 获取服务提供者 URL
@@ -118,7 +125,7 @@ public class RegistryProtocol implements Protocol {
         // 订阅override数据
         // FIXME 提供者订阅时，会影响同一JVM即暴露服务，又引用同一服务的的场景，因为subscribed以服务名为缓存的key，导致订阅信息覆盖。
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(registedProviderUrl);
-        final OverrideListener overrideSubscribeListener = new OverrideListener(overrideSubscribeUrl);
+        final OverrideListener overrideSubscribeListener = new OverrideListener(overrideSubscribeUrl); // 创建监听器
         overrideListeners.put(overrideSubscribeUrl, overrideSubscribeListener);
         registry.subscribe(overrideSubscribeUrl, overrideSubscribeListener);
         //保证每次export都返回一个新的exporter实例
@@ -155,8 +162,14 @@ public class RegistryProtocol implements Protocol {
             synchronized (bounds) {
                 exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
                 if (exporter == null) { // 未暴露过，进行服务暴露
+
+                    // 创建 Invoker 为委托类对象
                     final Invoker<?> invokerDelegete = new InvokerDelegete<T>(originInvoker, getProviderUrl(originInvoker));
+
+                    // 调用 protocol 的 export 方法导出服务
                     exporter = new ExporterChangeableWrapper<T>((Exporter<T>)protocol.export(invokerDelegete), originInvoker);
+
+                    // 写缓存
                     bounds.put(key, exporter);
                 }
             }

@@ -65,7 +65,7 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
             this.virtualInvokers = new TreeMap<Long, Invoker<T>>();
             this.identityHashCode = System.identityHashCode(invokers);
             URL url = invokers.get(0).getUrl();
-            this.replicaNumber = url.getMethodParameter(methodName, "hash.nodes", 160);
+            this.replicaNumber = url.getMethodParameter(methodName, "hash.nodes", 160); // 虚拟节点数量，默认160
             String[] index = Constants.COMMA_SPLIT_PATTERN.split(url.getMethodParameter(methodName, "hash.arguments", "0"));
             argumentIndex = new int[index.length];
             for (int i = 0; i < index.length; i ++) {
