@@ -88,7 +88,10 @@ public class DubboProtocol extends AbstractProtocol {
         public Object reply(ExchangeChannel channel, Object message) throws RemotingException {
             if (message instanceof Invocation) {
                 Invocation inv = (Invocation) message;
+
+                // 获取 Invoker 实例
                 Invoker<?> invoker = getInvoker(channel, inv);
+
                 //如果是callback 需要处理高版本调用低版本的问题
                 if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))){
                     String methodsStr = invoker.getUrl().getParameters().get("methods");
@@ -214,13 +217,18 @@ public class DubboProtocol extends AbstractProtocol {
             path = inv.getAttachments().get(Constants.PATH_KEY)+"."+inv.getAttachments().get(Constants.CALLBACK_SERVICE_KEY);
             inv.getAttachments().put(IS_CALLBACK_SERVICE_INVOKE, Boolean.TRUE.toString());
         }
+
+        // 获取 service key，格式为 groupName/serviceName:serviceVersion:port。比如：dubbo/com.alibaba.dubbo.demo.DemoService:1.0.0:20880
         String serviceKey = serviceKey(port, path, inv.getAttachments().get(Constants.VERSION_KEY), inv.getAttachments().get(Constants.GROUP_KEY));
 
+        // 从 exporterMap 查找与 serviceKey 相对应的 DubboExporter 对象，
+        // 服务导出过程中会将 <serviceKey, DubboExporter> 映射关系存储到 exporterMap 集合中
         DubboExporter<?> exporter = (DubboExporter<?>) exporterMap.get(serviceKey);
         
         if (exporter == null)
             throw new RemotingException(channel, "Not found exported service: " + serviceKey + " in " + exporterMap.keySet() + ", may be version or group mismatch " + ", channel: consumer: " + channel.getRemoteAddress() + " --> provider: " + channel.getLocalAddress() + ", message:" + inv);
 
+        // 获取 exporter 中的 Invoker 对象
         return exporter.getInvoker();
     }
     
@@ -237,9 +245,11 @@ public class DubboProtocol extends AbstractProtocol {
         
         // export service.
         // demoGroup/com.alibaba.dubbo.demo.DemoService:1.0.1:20880
+        // groupName/serviceName:serviceVersion:port。比如：dubbo/com.alibaba.dubbo.demo.DemoService:1.0.0:20880
         String key = serviceKey(url);
+
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap); // 创建 DubboExporter
-        exporterMap.put(key, exporter); // exporter 放入缓存
+        exporterMap.put(key, exporter); // exporter 放入缓存，后续服务调用会从缓存中获取exporter
         
         //export an stub service for dispaching event
         Boolean isStubSupportEvent = url.getParameter(Constants.STUB_EVENT_KEY,Constants.DEFAULT_STUB_EVENT);

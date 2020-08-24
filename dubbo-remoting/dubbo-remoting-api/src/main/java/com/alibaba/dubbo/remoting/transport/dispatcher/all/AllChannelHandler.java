@@ -50,9 +50,11 @@ public class AllChannelHandler extends WrappedChannelHandler {
         }
     }
 
+    // 处理请求和响应消息，这里的 message 变量类型可能是 Request，也可能是 Response
     public void received(Channel channel, Object message) throws RemotingException {
         ExecutorService cexecutor = getExecutorService();
         try {
+            // 将请求和响应消息派发到线程池中处理
             cexecutor.execute(new ChannelEventRunnable(channel, handler, ChannelState.RECEIVED, message));
         } catch (Throwable t) {
             throw new ExecutionException(message, channel, getClass() + " error when process received event .", t);

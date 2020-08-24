@@ -83,15 +83,19 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
             boolean isOneway = RpcUtils.isOneway(getUrl(), invocation);
             int timeout = getUrl().getMethodParameter(methodName, Constants.TIMEOUT_KEY,Constants.DEFAULT_TIMEOUT);
             if (isOneway) {
+                // isOneway 为 true，表示“单向”通信
             	boolean isSent = getUrl().getMethodParameter(methodName, Constants.SENT_KEY, false);
                 currentClient.send(inv, isSent);
                 RpcContext.getContext().setFuture(null);
                 return new RpcResult();
             } else if (isAsync) {
+                // 异步调用
+                // 同步和异步调用关键区别在于：谁调用 ResponseFuture 的 get 方法
             	ResponseFuture future = currentClient.request(inv, timeout) ;
                 RpcContext.getContext().setFuture(new FutureAdapter<Object>(future));
                 return new RpcResult();
             } else {
+                // 同步调用
             	RpcContext.getContext().setFuture(null);
                 return (Result) currentClient.request(inv, timeout).get();
             }

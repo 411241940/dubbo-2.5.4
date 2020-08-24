@@ -73,9 +73,10 @@ public class DefaultFuture implements ResponseFuture {
     public DefaultFuture(Channel channel, Request request, int timeout){
         this.channel = channel;
         this.request = request;
-        this.id = request.getId();
+        this.id = request.getId(); // requestId，由AtomicLong自增
         this.timeout = timeout > 0 ? timeout : channel.getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
         // put into waiting map.
+        // 存储 <requestId, DefaultFuture> 映射关系到 FUTURES 中
         FUTURES.put(id, this);
         CHANNELS.put(id, channel);
     }
@@ -84,6 +85,7 @@ public class DefaultFuture implements ResponseFuture {
         return get(timeout);
     }
 
+    // get方法使用 condition 阻塞，直到接收到服务端response回写回来，唤醒该 condition
     public Object get(int timeout) throws RemotingException {
         if (timeout <= 0) {
             timeout = Constants.DEFAULT_TIMEOUT;
@@ -93,7 +95,11 @@ public class DefaultFuture implements ResponseFuture {
             lock.lock();
             try {
                 while (! isDone()) {
+
+                    // 如果调用结果尚未返回，这里等待一段时间
                     done.await(timeout, TimeUnit.MILLISECONDS);
+
+                    // 如果调用结果成功返回，或等待超时，此时跳出 while 循环，执行后续的逻辑
                     if (isDone() || System.currentTimeMillis() - start > timeout) {
                         break;
                     }
@@ -103,6 +109,7 @@ public class DefaultFuture implements ResponseFuture {
             } finally {
                 lock.unlock();
             }
+            // 如果调用结果仍未返回，则抛出超时异常
             if (! isDone()) {
                 throw new TimeoutException(sent > 0, channel, getTimeoutMessage(false));
             }
@@ -233,8 +240,11 @@ public class DefaultFuture implements ResponseFuture {
         sent = System.currentTimeMillis();
     }
 
+    // 处理返回结果，根据 requestId 找到对应 Future ，写入 response 再唤醒 condition
+    // 服务提供方调用指定服务后，会将调用结果封装到 Response 对象中，并将该对象返回给服务消费方。服务提供方也是通过 NettyChannel 的 send 方法将 Response 对象返回
     public static void received(Channel channel, Response response) {
         try {
+            // 根据 requestId 从 FUTURES 集合中查找指定的 DefaultFuture 对象
             DefaultFuture future = FUTURES.remove(response.getId());
             if (future != null) {
                 future.doReceived(response);

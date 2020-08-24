@@ -78,9 +78,11 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
             return res;
         }
         // find handler by message class.
+        // 获取 data 字段值，也就是 RpcInvocation 对象
         Object msg = req.getData();
         try {
             // handle data.
+            // 继续向下调用，执行相关协议 Protocol 中的 reply 方法
             Object result = handler.reply(channel, msg);
             res.setStatus(Response.OK);
             res.setResult(result);
@@ -160,22 +162,27 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         channel.setAttribute(KEY_READ_TIMESTAMP, System.currentTimeMillis());
         ExchangeChannel exchangeChannel = HeaderExchangeChannel.getOrAddChannel(channel);
         try {
-            if (message instanceof Request) {
+            if (message instanceof Request) { // 处理请求对象，服务提供者执行
                 // handle request.
                 Request request = (Request) message;
                 if (request.isEvent()) {
+                    // 处理事件
                     handlerEvent(channel, request);
                 } else {
+                    // 双向通信
                     if (request.isTwoWay()) {
+                        // 向后调用服务，并得到调用结果
                         Response response = handleRequest(exchangeChannel, request);
+                        // 将调用结果返回给服务消费端
                         channel.send(response);
                     } else {
+                        // 如果是单向通信，仅向后调用指定服务即可，无需返回调用结果
                         handler.received(exchangeChannel, request.getData());
                     }
                 }
-            } else if (message instanceof Response) {
+            } else if (message instanceof Response) { // 处理响应对象，服务消费方会执行此处逻辑
                 handleResponse(channel, (Response) message);
-            } else if (message instanceof String) {
+            } else if (message instanceof String) { // telnet 相关
                 if (isClientSide(channel)) {
                     Exception e = new Exception("Dubbo client can not supported string message: " + message + " in channel: " + channel + ", url: " + channel.getUrl());
                     logger.error(e.getMessage(), e);

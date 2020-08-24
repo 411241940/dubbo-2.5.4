@@ -21,6 +21,7 @@ import com.alibaba.dubbo.remoting.Dispatcher;
 
 /**
  * 默认的线程池配置
+ * 所有消息都派发到线程池，包括请求，响应，连接事件，断开事件等
  * 
  * @author chao.liuc
  */

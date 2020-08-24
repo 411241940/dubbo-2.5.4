@@ -305,7 +305,11 @@ public class RegistryProtocol implements Protocol {
                 Constants.PROVIDERS_CATEGORY 
                 + "," + Constants.CONFIGURATORS_CATEGORY 
                 + "," + Constants.ROUTERS_CATEGORY));
-        return cluster.join(directory); // 创建 Invoker 对象
+
+        // 创建 Invoker 对象
+        // cluster 由 MockClusterWrapper 包装，用于降级处理
+        // 所以这里返回的是 MockClusterInvoker
+        return cluster.join(directory);
     }
 
     //过滤URL中不需要输出的参数(以点号开头的)
