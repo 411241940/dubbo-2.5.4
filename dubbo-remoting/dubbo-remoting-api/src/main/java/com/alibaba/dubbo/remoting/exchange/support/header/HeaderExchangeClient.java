@@ -38,6 +38,7 @@ import com.alibaba.dubbo.remoting.exchange.ResponseFuture;
 
 /**
  * DefaultMessageClient
+ * 封装了心跳检测逻辑，client默认为NettyClient
  * 
  * @author william.liangf
  * @author chao.liuc
@@ -65,13 +66,14 @@ public class HeaderExchangeClient implements ExchangeClient {
             throw new IllegalArgumentException("client == null");
         }
         this.client = client;
-        this.channel = new HeaderExchangeChannel(client);
+        this.channel = new HeaderExchangeChannel(client); // HeaderExchangeChannel 包装了 NettyClient
         String dubbo = client.getUrl().getParameter(Constants.DUBBO_VERSION_KEY);
         this.heartbeat = client.getUrl().getParameter( Constants.HEARTBEAT_KEY, dubbo != null && dubbo.startsWith("1.0.") ? Constants.DEFAULT_HEARTBEAT : 0 );
         this.heartbeatTimeout = client.getUrl().getParameter( Constants.HEARTBEAT_TIMEOUT_KEY, heartbeat * 3 );
         if ( heartbeatTimeout < heartbeat * 2 ) {
             throw new IllegalStateException( "heartbeatTimeout < heartbeatInterval * 2" );
         }
+        // 开启心跳检测定时器
         startHeatbeatTimer();
     }
 

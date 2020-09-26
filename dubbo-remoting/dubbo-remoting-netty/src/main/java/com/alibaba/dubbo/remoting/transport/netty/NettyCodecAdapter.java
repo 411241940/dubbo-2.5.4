@@ -136,7 +136,13 @@ final class NettyCodecAdapter {
                         buffer = com.alibaba.dubbo.remoting.buffer.ChannelBuffers.EMPTY_BUFFER;
                         throw e;
                     }
+
+                    // 如果发生了拆包情况，那么此时接收的inbound消息可能存在一下几种情况
+                    // 当前inbound消息只包含dubbo协议头的一部分
+                    // 当前inbound消息只包含dubbo的协议头
+                    // 当前inbound消息只包含dubbo消息头和部分payload消息
                     if (msg == Codec2.DecodeResult.NEED_MORE_INPUT) {
+                        // 读索引回滚，并且退出循环
                         message.readerIndex(saveReaderIndex);
                         break;
                     } else {

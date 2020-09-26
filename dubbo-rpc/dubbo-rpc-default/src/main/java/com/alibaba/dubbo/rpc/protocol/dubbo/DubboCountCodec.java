@@ -45,6 +45,7 @@ public final class DubboCountCodec implements Codec2 {
         do {
             Object obj = codec.decode(channel, buffer);
             if (Codec2.DecodeResult.NEED_MORE_INPUT == obj) {
+                // 当decode返回的是NEED_MORE_INPUT则表示当前的buffer中数据不足，不能完整解析出一个dubbo协议栈，回滚读索引
                 buffer.readerIndex(save);
                 break;
             } else {

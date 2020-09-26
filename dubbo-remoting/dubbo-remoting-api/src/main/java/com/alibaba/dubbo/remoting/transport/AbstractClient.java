@@ -262,11 +262,14 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
         if (send_reconnect && !isConnected()){
             connect();
         }
+        // 默认 NettyClient 中的 getChannel()
         Channel channel = getChannel();
+
         //TODO getChannel返回的状态是否包含null需要改进
         if (channel == null || ! channel.isConnected()) {
           throw new RemotingException(this, "message can not send, because channel is closed . url:" + getUrl());
         }
+
         channel.send(message, sent);
     }
     

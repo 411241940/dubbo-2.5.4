@@ -527,11 +527,11 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                         }
 
                         // 使用 ProxyFactory 创建 Invoker 对象。该 Invoker 对象，执行 #invoke(invocation) 方法时，会动态代理调用 Service 对象对应的方法
-                        // 传入的 URL 是注册中心的 URL 。 把 DubboProtocol 包装成 RegistryProtocol ，实现类似 AOP 的效果，先在本地服务器启动完成后，再向注册中心注册
                         Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(Constants.EXPORT_KEY, url.toFullString()));
 
                         // Invoker 转换为 Exporter
                         // 使用 Protocol 暴露 Invoker 对象
+                        // 传入的 URL 是注册中心的 URL 。 把 DubboProtocol 包装成 RegistryProtocol ，实现类似 AOP 的效果，先在本地服务器启动完成后，再向注册中心注册
                         Exporter<?> exporter = protocol.export(invoker);
                         exporters.add(exporter);
                     }

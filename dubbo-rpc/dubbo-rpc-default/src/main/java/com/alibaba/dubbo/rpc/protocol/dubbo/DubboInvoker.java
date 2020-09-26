@@ -72,17 +72,17 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         inv.setAttachment(Constants.PATH_KEY, getUrl().getPath());
         inv.setAttachment(Constants.VERSION_KEY, version);
         
-        ExchangeClient currentClient;
+        ExchangeClient currentClient; // ReferenceCountExchangeClient -> HeaderExchangeClient
         if (clients.length == 1) {
             currentClient = clients[0];
         } else {
             currentClient = clients[index.getAndIncrement() % clients.length];
         }
         try {
-            boolean isAsync = RpcUtils.isAsync(getUrl(), invocation);
-            boolean isOneway = RpcUtils.isOneway(getUrl(), invocation);
+            boolean isAsync = RpcUtils.isAsync(getUrl(), invocation); // 获取异步配置
+            boolean isOneway = RpcUtils.isOneway(getUrl(), invocation); // 是否单向通信
             int timeout = getUrl().getMethodParameter(methodName, Constants.TIMEOUT_KEY,Constants.DEFAULT_TIMEOUT);
-            if (isOneway) {
+            if (isOneway) { // 异步单向
                 // isOneway 为 true，表示“单向”通信
             	boolean isSent = getUrl().getMethodParameter(methodName, Constants.SENT_KEY, false);
                 currentClient.send(inv, isSent);

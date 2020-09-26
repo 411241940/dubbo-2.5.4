@@ -68,6 +68,8 @@ public class NettyServer extends AbstractServer implements Server {
         NettyHelper.setNettyLoggerFactory();
         ExecutorService boss = Executors.newCachedThreadPool(new NamedThreadFactory("NettyServerBoss", true));
         ExecutorService worker = Executors.newCachedThreadPool(new NamedThreadFactory("NettyServerWorker", true));
+
+        // worker线程数默认为 CPU核数+1
         ChannelFactory channelFactory = new NioServerSocketChannelFactory(boss, worker, getUrl().getPositiveParameter(Constants.IO_THREADS_KEY, Constants.DEFAULT_IO_THREADS));
         bootstrap = new ServerBootstrap(channelFactory);
         
@@ -84,8 +86,8 @@ public class NettyServer extends AbstractServer implements Server {
                 if (idleTimeout > 10000) {
                     pipeline.addLast("timer", new IdleStateHandler(timer, idleTimeout / 1000, 0, 0));
                 }*/
-                pipeline.addLast("decoder", adapter.getDecoder());
-                pipeline.addLast("encoder", adapter.getEncoder());
+                pipeline.addLast("decoder", adapter.getDecoder()); // 解码
+                pipeline.addLast("encoder", adapter.getEncoder()); // 编码
                 pipeline.addLast("handler", nettyHandler);
                 return pipeline;
             }
